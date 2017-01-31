@@ -19,16 +19,6 @@
 import argparse
 import re
 
-#TODO:
-#   - add -s --sid option to let user specify the starting sid
-#   - add rule for md5
-#   - manage uri like example.com/stuff_here
-#   - make the prints to tsdout conditionnals to args.output
-#   - add exception PermissionError if .sid and output file can't be written
-#   - add baserule for domain in ssl cert (if possible)
-#   - add rules examples along the baserules
-#   - smb/netbios etc ?
-
 # To add a rule class while keeping the code clean, add the baserule here
 IP_UDP_BASERULE = 'alert udp $HOME_NET any -> %s any (msg:"%s - %s - UDP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
 IP_TCP_BASERULE = 'alert tcp $HOME_NET any -> %s any (msg:"%s - %s - TCP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
@@ -40,60 +30,54 @@ def main(args):
     global ORG
     ORG = args.emitter
 
-    #############################
-    #       Latest SID
-    print("[+] Getting SID")
-    try:
-        with open(".sid_log_file", "r") as f_sid_log_file:
-            line = f_sid_log_file.readline()
-            sid = int(line)
-    except FileNotFoundError:
-        sid = 5100000
-        print("[-] .sid_log_file not found, starting SID from %s"%str(sid))
+    sid = get_sid()
 
     #############################
     #       Generating rules
     print("[+] Generating rules")
-    with open(args.file, "r") as f_input:
-        rules = []
-        for line in f_input:
-            line = line.strip()
-            (name, ioc, url) = split_line(line)
-            sid += 1
-            if ioc.startswith("/"):
-                # URL it is
-                rules.append(gen_url_rule(name, ioc, url, sid))
-            elif re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ioc):
-                # IP it is
-                #rules.append(gen_ip_rule_udp(name, ioc, url, sid))
-                #sid += 1
-                #rules.append(gen_ip_rule_tcp(name, ioc, url, sid))
-                #sid += 1
-                rules.append(gen_ip_rule(name, ioc, url, sid))
-            else:
-                # Well, by lack of other option, let's say it is a domain name
-                rules.append(gen_dns_rule(name, ioc, url, sid))
+    try:
+        with open(args.file, "r") as f_input:
+            rules = []
+            for line in f_input:
+                line = line.strip()
+                (name, ioc, url) = split_line(line)
                 sid += 1
-                rules.append(gen_url_rule(name, ioc, url, sid))
+                if ioc.startswith("/"):
+                    # URL it is
+                    rules.append(gen_url_rule(name, ioc, url, sid))
+                elif re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ioc):
+                    # IP it is
+                    #rules.append(gen_ip_rule_udp(name, ioc, url, sid))
+                    #sid += 1
+                    #rules.append(gen_ip_rule_tcp(name, ioc, url, sid))
+                    #sid += 1
+                    rules.append(gen_ip_rule(name, ioc, url, sid))
+                else:
+                    # Well, by lack of other option, let's say it is a domain name
+                    rules.append(gen_dns_rule(name, ioc, url, sid))
+                    sid += 1
+                    rules.append(gen_url_rule(name, ioc, url, sid))
+    except PermissionError as err:
+        print(err)
+        print("[+] Aborting!")
+        quit(0)
 
     #############################
-    #       Writing rules to file
+    #       Writing rules to file or stdout
     if args.output:
         print("[+] Writing Rule file")
-        with open(args.output, "a") as f_out:
-            for rule in rules:
-                f_out.write("%s \n"%(rule))
+        try:
+            with open(args.output, "a") as f_out:
+                for rule in rules:
+                    f_out.write("%s \n"%(rule))
+        except PermissionError:
+            print("[+] Can't write rule file, permission denied")
+            print("[+] Rules not saved, be carefull")
     else:
         for rule in rules:
             print("%s"%rule)
 
-    #############################
-    #       Logging max sid
-    print("[+] Writing Last SID")
-    with open(".sid_log_file", "w") as f_sid:
-        f_sid.write("%d"%(sid))
-
-    return True
+    save_sid(sid)
 
 def gen_dns_rule(name, domain, ref, sid):
     '''
@@ -141,9 +125,41 @@ def gen_ip_rule_tcp(name, ip_addr, ref, sid):
 def gen_ip_rule(name, ip_addr, ref, sid):
     '''
     Generate suricata rule for an IP
+IP_BASERULE = 'alert ip $HOME_NET any -> %s any (msg:"%s - %s - IP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
     '''
-    rule = (IP_BASERULE%(ORG, ip_addr, name, ip_addr, ref, sid))
+    rule = (IP_BASERULE%(ip_addr, ORG, name, ip_addr, ref, sid))
     return rule
+
+def get_sid():
+    '''
+    get sid to use for this run
+    '''
+    print("[+] Getting SID")
+    try:
+        with open(".sid_log_file", "r") as f_sid_log_file:
+            line = f_sid_log_file.readline()
+            return int(line)
+    except FileNotFoundError:
+        print("[-] .sid_log_file not found, starting SID from 5100000")
+        return 5100000
+    except PermissionError as err:
+        print(err)
+        print("[+] Aborting!")
+        quit(0)
+
+def save_sid(sid):
+    '''
+    save sid to use for next run
+    '''
+    print("[+] Writing Last SID")
+    try:
+        with open(".sid_log_file", "w") as f_sid:
+            f_sid.write("%d"%(sid))
+    except PermissionError as err:
+        print(err)
+        print("[+] sid not saved, be carefull")
+        return False
+    return True
 
 def split_line(line):
     '''
