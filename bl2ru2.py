@@ -27,6 +27,7 @@ IP_TCP_BASERULE = 'alert tcp $HOME_NET any -> %s any (msg:"%s - %s - TCP traffic
 IP_BASERULE = 'alert ip $HOME_NET any -> %s any (msg:"%s - %s - IP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
 DNS_BASERULE = 'alert udp $HOME_NET any -> any 53 (msg:"%s - %s - DNS request for %s"; content:"|01 00 00 01 00 00 00 00 00 00|"; depth:20; offset: 2; content:"%s"; fast_pattern:only; nocase; classtype:trojan-activity; reference:url,%s; sid: %d; rev:1;)'
 URL_BASERULE = 'alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"%s - %s - Related URL (%s)"; content:"%s"; http_uri;%s classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
+TLS_BASERULE = 'alert tls $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"%s - %s - Related TLS SNI (%s)"; tls_sni; content:"%s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
 
 def main(args):
     global ORG
@@ -61,10 +62,12 @@ def main(args):
                     #sid += 1
                     rules.append(gen_ip_rule(name, ioc, ref_url, sid))
                 else:
-                    # Well, by lack of other option, let's say it is a domain name
+                    # Well, by lack of other option, let's say it is a FQDN
                     rules.append(gen_dns_rule(name, ioc, ref_url, sid))
                     sid += 1
                     rules.append(gen_uri_rule(name, ioc, ref_url, sid))
+                    sid += 1
+                    rules.append(gen_tls_rule(name, ioc, ref_url, sid))
     except PermissionError as err:
         print(err)
         print("[+] Aborting!")
@@ -138,6 +141,13 @@ def gen_ip_rule(name, ip_addr, ref, sid):
     Generate suricata rule for an IP
     '''
     rule = (IP_BASERULE%(ip_addr, ORG, name, ip_addr, ref, sid))
+    return rule
+
+def gen_tls_rule(name, domain, ref, sid):
+    '''
+    Generate suricata TLS SNI rule for a domain
+    '''
+    rule = (TLS_BASERULE%(ORG, name, domain, domain, ref, sid))
     return rule
 
 def get_sid():
