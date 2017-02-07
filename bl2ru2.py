@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # Copyright 2013, 2014, 2017 Conix Cybersécurité
-# Copyright 2013 Adrien Chevalier
-# Copyright 2013, 2014 Alexandre Deloup
+# Copyright 2013 Adrien Chevalier (bl2ru)
+# Copyright 2013, 2014 Alexandre Deloup (bl2ru)
 # Copyright 2017 Robin Marsollier
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,11 @@ import argparse
 import re
 
 #####
-# To add a rule class while keeping the code clean, add the baserule here
+# To add a rule class while keeping the code clean:
+# 1. add the base rule thereafter
+# 2. create the gen_SMTHG_rule() function that is going to generate the rules
+#        using the baserule defined before
+# 3. modify the generate_rules() function to call your new generator
 #####
 IP_UDP_BASERULE = 'alert udp $HOME_NET any -> %s any (msg:"%s - %s - UDP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
 IP_TCP_BASERULE = 'alert tcp $HOME_NET any -> %s any (msg:"%s - %s - TCP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
@@ -29,23 +33,12 @@ DNS_BASERULE = 'alert udp $HOME_NET any -> any 53 (msg:"%s - %s - DNS request fo
 URL_BASERULE = 'alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"%s - %s - Related URL (%s)"; content:"%s"; http_uri;%s classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
 TLS_BASERULE = 'alert tls $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"%s - %s - Related TLS SNI (%s)"; tls_sni; content:"%s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
 
-def main(args):
-    global ORG
-    ORG = args.emitter
-
-    if not args.ssid:
-        if args.output:
-            print("[+] Getting SID")
-        sid = get_sid()
-    else:
-        sid = args.ssid
-
-    #############################
-    #       Generating rules
-    if args.output:
-        print("[+] Generating rules")
+def generate_rules(csv_file, sid):
+    '''
+    Determine ioc type and call the differents generators
+    '''
     try:
-        with open(args.file, "r") as f_input:
+        with open(csv_file, "r") as f_input:
             rules = []
             for line in f_input:
                 line = line.strip()
@@ -72,25 +65,7 @@ def main(args):
         print(err)
         print("[+] Aborting!")
         quit(0)
-
-    #############################
-    #       Writing rules to file or stdout
-    if args.output:
-        print("[+] Writing Rule file")
-        try:
-            with open(args.output, "a") as f_out:
-                for rule in rules:
-                    f_out.write("%s \n"%(rule))
-        except PermissionError:
-            print("[+] Can't write rule file, permission denied")
-            print("[+] Rules not saved, be carefull")
-    else:
-        for rule in rules:
-            print("%s"%rule)
-
-    if args.output:
-        print("[+] Writing Last SID")
-    save_sid(sid)
+    return rules, sid
 
 def gen_dns_rule(name, domain, ref, sid):
     '''
@@ -189,11 +164,52 @@ def split_line(line):
     ioc = ioc.strip()
     return name, ioc, ref_url
 
+def main(args):
+    '''
+    main
+    '''
+    global ORG
+    ORG = args.emitter
+
+    if not args.ssid:
+        if args.output:
+            print("[+] Getting SID")
+        sid = get_sid()
+    else:
+        sid = args.ssid
+
+    #############################
+    #       Generating rules
+    if args.output:
+        print("[+] Generating rules")
+    (rules, sid) = generate_rules(args.file, sid)
+
+    #############################
+    #       Writing rules to file or stdout
+    if args.output:
+        print("[+] Writing Rule file")
+        try:
+            with open(args.output, "a") as f_out:
+                for rule in rules:
+                    f_out.write("%s \n"%(rule))
+        except PermissionError:
+            print("[+] Can't write rule file, permission denied")
+            print("[+] Rules not saved, be carefull")
+    else:
+        for rule in rules:
+            print("%s"%rule)
+
+    if args.output:
+        print("[+] Writing Last SID")
+    save_sid(sid)
+
 if __name__ == '__main__':
     __parser__ = argparse.ArgumentParser()
     __parser__.add_argument("file", help="Input file")
-    __parser__.add_argument("--output", "-o", help="Output file")
-    __parser__.add_argument("--ssid", "-s", help="First sid of the generated rules", type=int)
+    __parser__.add_argument("--output", "-o", \
+            help="Output file (default is stdout)")
+    __parser__.add_argument("--ssid", "-s", \
+            help="Starting sid of the generated rules", type=int)
     __parser__.add_argument("--emitter", "-e", \
             help="Emitter of the rules, default: bl2ru2", default="bl2ru2")
     __args__ = __parser__.parse_args()

@@ -1,18 +1,22 @@
 # bl2ru2
 This tool is aimed to be the succesor of bl2ru.
 
-This tools creates suricate rules for the following IOC types :
-- domain
-- IP
-- URL
+This tools creates suricate rules for the following IOC types:
+- domain: DNS request rule, HTTP request rule and TLS SNI rule
+- IP: IP rule
+- URL: HTTP/URL request rule
 
 While the original bl2ru performed dns requests to retrieve ip adresses associated with each domain of the domain list given (and thus sometimes duplicating rules), this tool takes another approach and let your TI determine this and only create rules for given input, without trying any enrichment of the data.
 
+To ensure maximum efficiency ofthis tool, your upstream Threat Intelligence should take care of:
+- eliminate duplicates
+- enrich data correctly
+- split data (i.e. split conix.fr/nos-expertises/ssi/ in conix.fr and /nos_expertises/ssi)
 
 # Usage
 ```
 $  python3 bl2ru2.py --help
-usage: bl2ru2.py [-h] [--output OUTPUT] [--emitter EMITTER] file
+usage: bl2ru2.py [-h] [--output OUTPUT] [--ssid SSID] [--emitter EMITTER] file
 
 positional arguments:
   file                  Input file
@@ -20,9 +24,11 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --output OUTPUT, -o OUTPUT
-                        Output file
+                        Output file (default is stdou)
+  --ssid SSID, -s SSID  Starting sid of the generated rules
   --emitter EMITTER, -e EMITTER
-                        Emitter of the rules, default: bl2ru2
+                                                          Emitter of the rules, default: bl2ru2
+
 ```
 The input file must be a csv-like file (delimiter is a space) containing the following information, 3 rows :
 - first row : Threat name
@@ -53,6 +59,15 @@ alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"CERT-Conix - Luminosi
 alert ip $HOME_NET any -> 70.30.5.3 any (msg:"CERT-Conix - LuminosityLink - IP traffic to 70.30.5.3"; classtype:trojan-activity; reference:url,https://conix.fr; sid:5100006; rev:1;)
 ```
 
+# Adding your own rule generator
+If you find yourself in the need of another rule type not generated yet by bl2ru2, follow the following procedure:
+- add the base rule on the top of the bl2ru2.py file
+- create the gen_SMTHG_rule() function that is going to generate the rules using the baserule defined before
+- modify the generate_rules() function to call your new generator
+- Pull request your changes
+
 # TODO
-- add baserule for domain in ssl cert (if possible)
-- smb/netbios etc ?
+- smb/netbios rules?
+
+# Authors
+- Robin Marsollier
