@@ -24,20 +24,20 @@ optional arguments:
   --emitter EMITTER, -e EMITTER
                         Emitter of the rules, default: bl2ru2
 ```
-The input file must be a csv file containing the following information, 3 rows :
+The input file must be a csv-like file (delimiter is a space) containing the following information, 3 rows :
 - first row : Threat name
-- second row : IOC
-- third row : link to a reference
+- second row : Link to a reference
+- third row : IOC
 
 ```
-LuminosityLink;030092056f0368639145711a615d3b7f.co.cc;https://conix.fr
+LuminosityLink http://www.conix.fr 030092056f0368639145711a615d3b7f.co.cc
 ```
 
 # Example
 ```
 $  cat blacklist.txt
-LuminosityLink;030092056f0368639145711a615d3b7f.co.cc;https://conix.fr
-LuminosityLink;70.30.5.3;https://conix.fr
+LuminosityLink https://www.conix.fr 030092056f0368639145711a615d3b7f.co.cc
+LuminosityLink https://www.conix.fr 70.30.5.3
 $
 $
 $  python3 bl2ru2.py blacklist.txt -o cert-conix.rules -e CERT-Conix
