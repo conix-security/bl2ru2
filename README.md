@@ -54,10 +54,5 @@ alert ip $HOME_NET any -> 70.30.5.3 any (msg:"CERT-Conix - LuminosityLink - IP t
 ```
 
 # TODO
-- add -s --sid option to let user specify the starting sid
-- add rule for md5
-- manage uri like example.com/stuff_here
-- make the prints to stdout conditionnals to args.output
 - add baserule for domain in ssl cert (if possible)
-- add rules examples along the baserules
 - smb/netbios etc ?
