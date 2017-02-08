@@ -1,17 +1,17 @@
 # bl2ru2
-This tool is aimed to be the succesor of bl2ru.
+This tool is aimed to be the successor of bl2ru.
 
-This tools creates suricate rules for the following IOC types:
+This tools creates suricata rules for the following IOC types:
 - domain: DNS request rule, HTTP request rule and TLS SNI rule
 - IP: IP rule
-- URL: HTTP/URL request rule
+- URL: HTTP/URL request rule (not yet fully tested)
 
 While the original bl2ru performed dns requests to retrieve ip adresses associated with each domain of the domain list given (and thus sometimes duplicating rules), this tool takes another approach and let your TI determine this and only create rules for given input, without trying any enrichment of the data.
 
 To ensure maximum efficiency ofthis tool, your upstream Threat Intelligence should take care of:
-- eliminate duplicates
-- enrich data correctly
-- split data (i.e. split conix.fr/nos-expertises/ssi/ in conix.fr and /nos_expertises/ssi)
+- duplicates elimination
+- data enrichment
+- data splitting (i.e. split conix.fr/nos-expertises/ssi/ in conix.fr and /nos_expertises/ssi)
 
 # Usage
 ```
@@ -27,7 +27,7 @@ optional arguments:
                         Output file (default is stdou)
   --ssid SSID, -s SSID  Starting sid of the generated rules
   --emitter EMITTER, -e EMITTER
-                                                          Emitter of the rules, default: bl2ru2
+                        Emitter of the rules, default: bl2ru2
 
 ```
 The input file must be a csv-like file (delimiter is a space) containing the following information, 3 rows :
@@ -35,6 +35,7 @@ The input file must be a csv-like file (delimiter is a space) containing the fol
 - second row : Link to a reference
 - third row : IOC
 
+Like:
 ```
 LuminosityLink http://www.conix.fr 030092056f0368639145711a615d3b7f.co.cc
 ```

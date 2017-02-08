@@ -92,7 +92,7 @@ def gen_uri_rule(name, url, ref, sid):
         rule_content = ' content:"?%s=";'%(params[0].split("=")[0])
         for param in params[1:]:
             # escaping ';'
-            param = param.replace(';', r'\;')
+            param = param.replace(';', r'|3b|')
             rule_content += ' content:"&%s=";'%(param.split("=")[0])
     rule = (URL_BASERULE%(ORG, name, uri, uri, rule_content, ref, sid))
     return rule
