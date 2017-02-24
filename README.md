@@ -12,6 +12,10 @@ To ensure maximum efficiency ofthis tool, your upstream Threat Intelligence shou
 - duplicates elimination
 - data enrichment
 - data splitting (i.e. split conix.fr/nos-expertises/ssi/ in conix.fr and /nos_expertises/ssi)
+# Installation
+```
+pip3 install bl2ru2
+```
 
 # Usage
 ```
