@@ -26,12 +26,12 @@ import re
 #        using the baserule defined before
 # 3. modify the generate_rules() function to call your new generator
 #####
-IP_UDP_BASERULE = 'alert udp $HOME_NET any -> %s any (msg:"%s - %s - UDP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
-IP_TCP_BASERULE = 'alert tcp $HOME_NET any -> %s any (msg:"%s - %s - TCP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
-IP_BASERULE = 'alert ip $HOME_NET any -> %s any (msg:"%s - %s - IP traffic to %s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
-DNS_BASERULE = 'alert udp $HOME_NET any -> any 53 (msg:"%s - %s - DNS request for %s"; content:"|01 00 00 01 00 00 00 00 00 00|"; depth:20; offset: 2; content:"%s"; fast_pattern:only; nocase; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
-URL_BASERULE = 'alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"%s - %s - Related URL (%s)"; content:"%s"; http_uri;%s classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
-TLS_BASERULE = '#alert tls $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"%s - %s - Related TLS SNI (%s)"; tls_sni; content:"%s"; classtype:trojan-activity; reference:url,%s; sid:%d; rev:1;)'
+IP_UDP_BASERULE = 'alert udp $HOME_NET any -> {} any (msg:"{} - {} - UDP traffic to {}"; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+IP_TCP_BASERULE = 'alert tcp $HOME_NET any -> {} any (msg:"{} - {} - TCP traffic to {}"; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+IP_BASERULE = 'alert ip $HOME_NET any -> {} any (msg:"{} - {} - IP traffic to {}"; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+DNS_BASERULE = 'alert udp $HOME_NET any -> any 53 (msg:"{} - {} - DNS request for {}"; content:"|01 00 00 01 00 00 00 00 00 00|"; depth:20; offset: 2; content:"{}"; fast_pattern:only; nocase; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+URL_BASERULE = 'alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related URL ({})"; content:"{}"; http_uri;{} classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+TLS_BASERULE = '#alert tls $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related TLS SNI ({})"; tls_sni; content:"{}"; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
 
 class Bl2ru2:
     _sid_ = 0
@@ -63,7 +63,7 @@ class Bl2ru2:
         '''
         try:
             with open(".sid_log_file", "w", encoding="utf-8") as f_sid:
-                f_sid.write("%d"%(self._sid_))
+                f_sid.write("{}".format(self._sid_))
         except PermissionError as err:
             print(err)
             print("[-] sid not saved, be carefull")
@@ -77,10 +77,10 @@ class Bl2ru2:
         members = domain.split(".")
         dns_request = ""
         for member in members:
-            dns_request += "|%0.2X|%s"%(len(member), member)
-        rule = (DNS_BASERULE%(self._org_, name, domain, dns_request, ref, self._sid_))
+            dns_request += "|%0.2X|{}".format(len(member), member)
+        rule = (DNS_BASERULE.format(self._org_, name, domain, dns_request, ref, self._sid_))
         self._sid_ += 1
-        return rule
+        return rule, self._sid_-1
 
     def gen_uri_rule(self, name, url, ref):
         '''
@@ -92,46 +92,46 @@ class Bl2ru2:
         rule_content = ""
         if uri_params:
             params = uri_params.split("&")
-            rule_content = ' content:"?%s=";'%(params[0].split("=")[0])
+            rule_content = ' content:"?{}=";'.format(params[0].split("=")[0])
             for param in params[1:]:
                 # escaping ';'
                 param = param.replace(';', r'|3b|')
-                rule_content += ' content:"&%s=";'%(param.split("=")[0])
-        rule = (URL_BASERULE%(self._org_, name, uri, uri, rule_content, ref, self._sid_))
+                rule_content += ' content:"&{}=";'.format(param.split("=")[0])
+        rule = (URL_BASERULE.format(self._org_, name, uri, uri, rule_content, ref, self._sid_))
         self._sid_ += 1
-        return rule
+        return rule, self._sid_-1
 
     def gen_ip_rule_udp(self, name, ip_addr, ref):
         '''
         Generate suricata rule for an IP, traffic over udp
         '''
-        rule = (IP_UDP_BASERULE%(ip_addr, self._org_, name, ip_addr, ref, self._sid_))
+        rule = (IP_UDP_BASERULE.format(ip_addr, self._org_, name, ip_addr, ref, self._sid_))
         self._sid_ += 1
-        return rule
+        return rule, self._sid_-1
 
     def gen_ip_rule_tcp(self, name, ip_addr, ref):
         '''
         Generate suricata rule for an IP, traffic over tcp
         '''
-        rule = (IP_TCP_BASERULE%(ip_addr, self._org_, name, ip_addr, ref, self._sid_))
+        rule = (IP_TCP_BASERULE.format(ip_addr, self._org_, name, ip_addr, ref, self._sid_))
         self._sid_ += 1
-        return rule
+        return rule, self._sid_-1
 
     def gen_ip_rule(self, name, ip_addr, ref):
         '''
         Generate suricata rule for an IP
         '''
-        rule = (IP_BASERULE%(ip_addr, self._org_, name, ip_addr, ref, self._sid_))
+        rule = (IP_BASERULE.format(ip_addr, self._org_, name, ip_addr, ref, self._sid_))
         self._sid_ += 1
-        return rule
+        return rule, self._sid_-1
 
     def gen_tls_rule(self, name, domain, ref):
         '''
         Generate suricata TLS SNI rule for a domain
         '''
-        rule = (TLS_BASERULE%(self._org_, name, domain, domain, ref, self._sid_))
+        rule = (TLS_BASERULE.format(self._org_, name, domain, domain, ref, self._sid_))
         self._sid_ += 1
-        return rule
+        return rule, self._sid_-1
 
 def __split_line__(line):
     '''
@@ -191,13 +191,13 @@ def main(args):
         try:
             with open(args.output, "a") as f_out:
                 for rule in rules:
-                    f_out.write("%s \n"%(rule))
+                    f_out.write("{} \n".format(rule))
         except PermissionError:
             print("[+] Can't write rule file, permission denied")
             print("[+] Rules not saved, be carefull")
     else:
         for rule in rules:
-            print("%s"%rule)
+            print("{}".format(rule))
 
 if __name__ == '__main__':
     __parser__ = argparse.ArgumentParser()
