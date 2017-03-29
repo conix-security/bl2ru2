@@ -27,11 +27,11 @@ import re
 # 3. modify the generate_rules() function to call your new generator
 #####
 IP_UDP_BASERULE = 'alert udp $HOME_NET any -> {} any (msg:"{} - {} - UDP traffic to {}"; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
-IP_TCP_BASERULE = 'alert tcp $HOME_NET any -> {} any (msg:"{} - {} - TCP traffic to {}"; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+IP_TCP_BASERULE = 'alert tcp $HOME_NET any -> {} any (msg:"{} - {} - TCP traffic to {}"; flow:to_server,established; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
 IP_BASERULE = 'alert ip $HOME_NET any -> {} any (msg:"{} - {} - IP traffic to {}"; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
-DNS_BASERULE = 'alert udp $HOME_NET any -> any 53 (msg:"{} - {} - DNS request for {}"; content:"|01 00 00 01 00 00 00 00 00 00|"; depth:20; offset: 2; content:"{}"; fast_pattern:only; nocase; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
-URL_BASERULE = 'alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related URL ({})"; content:"{}"; http_uri;{} classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
-TLS_BASERULE = '#alert tls $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related TLS SNI ({})"; tls_sni; content:"{}"; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+DNS_BASERULE = 'alert udp $HOME_NET any -> any 53 (msg:"{} - {} - DNS request for {}"; content:"|01 00 00 01 00 00 00 00 00 00|"; depth:20; offset: 2; content:"{}"; flow:to_server; fast_pattern:only; nocase; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+URL_BASERULE = 'alert http $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related URL ({})"; content:"{}"; http_uri;{}; flow:to_server,established; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
+TLS_BASERULE = '#alert tls $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related TLS SNI ({})"; tls_sni; content:"{}";flow:to_server,established; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
 
 class Bl2ru2:
     _sid_ = 0
