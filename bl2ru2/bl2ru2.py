@@ -77,7 +77,7 @@ class Bl2ru2:
         members = domain.split(".")
         dns_request = ""
         for member in members:
-            dns_request += "|%0.2X|{}".format(len(member), member)
+            dns_request += "|{:02X}|{}".format(len(member), member)
         rule = (DNS_BASERULE.format(self._org_, name, domain, dns_request, ref, self._sid_))
         self._sid_ += 1
         return rule, self._sid_-1
