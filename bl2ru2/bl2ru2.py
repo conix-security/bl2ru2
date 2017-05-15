@@ -155,17 +155,24 @@ def __generate_rules__(gen, csv_file):
                 (name, ioc, ref_url) = __split_line__(line)
                 if ioc.startswith("/") or ioc.startswith("http"):
                     # URI it is
-                    rules.append(gen.gen_uri_rule(name, ioc, ref_url))
+                    (rule, sid) = gen.gen_uri_rule(name, ioc, ref_url)
+                    rules.append(rule)
                 elif re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ioc):
                     # IP it is
-                    #rules.append(gen.gen_ip_rule_udp(name, ioc, ref_url))
-                    #rules.append(gen.gen_ip_rule_tcp(name, ioc, ref_url))
-                    rules.append(gen.gen_ip_rule(name, ioc, ref_url))
+                    #(rule, sid) = gen.gen_ip_rule_udp(name, ioc, ref_url)
+                    #rules.append(rule)
+                    #(rule, sid) = gen.gen_ip_rule_tcp(name, ioc, ref_url)
+                    #rules.append(rule)
+                    (rule, sid) = gen.gen_ip_rule(name, ioc, ref_url)
+                    rules.append(rule)
                 else:
                     # Well, by lack of other option, let's say it is a FQDN
-                    rules.append(gen.gen_dns_rule(name, ioc, ref_url))
-                    rules.append(gen.gen_uri_rule(name, ioc, ref_url))
-                    rules.append(gen.gen_tls_rule(name, ioc, ref_url))
+                    (rule, sid) = gen.gen_dns_rule(name, ioc, ref_url)
+                    rules.append(rule)
+                    (rule, sid) = gen.gen_uri_rule(name, ioc, ref_url)
+                    rules.append(rule)
+                    (rule, sid) = gen.gen_tls_rule(name, ioc, ref_url)
+                    rules.append(rule)
     except PermissionError as err:
         print(err)
         print("[+] Aborting!")
