@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
 import re
+import os
+
 
 #####
 # To add a rule class while keeping the code clean:
@@ -32,7 +34,7 @@ IP_BASERULE = 'alert ip $HOME_NET any -> {} any (msg:"{} - {} - IP traffic to {}
 DNS_BASERULE = 'alert udp $HOME_NET any -> any 53 (msg:"{} - {} - DNS request for {}"; content:"|01 00 00 01 00 00 00 00 00 00|"; depth:20; offset: 2; content:"{}"; flow:to_server; fast_pattern:only; nocase; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
 URL_BASERULE = 'alert http $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related URL ({})"; content:"{}"; http_uri;{} flow:to_server,established; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
 TLS_BASERULE = '#alert tls $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related TLS SNI ({})"; tls_sni; content:"{}";flow:to_server,established; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
-
+MD5_BASERULE = 'alert tcp any [$HTTP_PORTS, 25] -> $HOME_NET any (msg:"{} - {} - MD5 hash found in blacklist {}"; classtype:trojan-activity; filestore; filemd5:{}; reference:url,{}; sid:{}; rev:1;)'
 class Bl2ru2:
     _sid_ = 0
     _org_ = ""
@@ -70,6 +72,7 @@ class Bl2ru2:
             return False
         return True
 
+
     def gen_dns_rule(self, name, domain, ref):
         '''
         Generate suricata rule for a domain
@@ -87,7 +90,7 @@ class Bl2ru2:
         Generate suricata rule for an url
         '''
         uri = url.split("?")[0]
-        #If there are many "?" in the complete url, colapse them
+        # If there are many "?" in the complete url, colapse them
         uri_params = "?".join(url.split("?")[1:])
         rule_content = ""
         if uri_params:
@@ -99,7 +102,9 @@ class Bl2ru2:
                 rule_content += ' content:"&{}=";'.format(param.split("=")[0])
         rule = (URL_BASERULE.format(self._org_, name, uri, uri, rule_content, ref, self._sid_))
         self._sid_ += 1
-        return rule, self._sid_-1
+        return rule, self._sid_ - 1
+
+
 
     def gen_ip_rule_udp(self, name, ip_addr, ref):
         '''
@@ -133,6 +138,21 @@ class Bl2ru2:
         self._sid_ += 1
         return rule, self._sid_-1
 
+    def gen_md5_rule(self, name, filepath, ref):
+        '''
+        Check if filename is a path or a filename
+        :param name: Threat name
+        :param filepath: Can be a path or a filename. If your md5 file is in /etc/suricata/rules you can just pass a filename.
+                         Else, you need a full path.
+        :param ref: reference_url
+        :return: The generated rule and the new sid
+        '''
+        rule = (MD5_BASERULE.format(self._org_, name, os.path.basename(filepath), filepath, ref, self._sid_))
+        self._sid_ += 1
+        return rule, self._sid_-1
+
+
+
 def __split_line__(line):
     '''
     Cut the line to extract the different fields
@@ -153,7 +173,8 @@ def __generate_rules__(gen, csv_file):
             for line in f_input:
                 line = line.strip()
                 (name, ioc, ref_url) = __split_line__(line)
-                if ioc.startswith("/") or ioc.startswith("http"):
+                if (ioc.startswith("/") or ioc.startswith("http")) and not os.path.isfile(ioc) :
+                    print("a")
                     # URI it is
                     (rule, sid) = gen.gen_uri_rule(name, ioc, ref_url)
                     rules.append(rule)
@@ -164,6 +185,9 @@ def __generate_rules__(gen, csv_file):
                     #(rule, sid) = gen.gen_ip_rule_tcp(name, ioc, ref_url)
                     #rules.append(rule)
                     (rule, sid) = gen.gen_ip_rule(name, ioc, ref_url)
+                    rules.append(rule)
+                elif os.path.isfile(ioc):
+                    (rule, sid) = gen.gen_md5_rule(name, ioc, ref_url)
                     rules.append(rule)
                 else:
                     # Well, by lack of other option, let's say it is a FQDN
@@ -205,6 +229,8 @@ def main(args):
     else:
         for rule in rules:
             print("{}".format(rule))
+
+
 
 if __name__ == '__main__':
     __parser__ = argparse.ArgumentParser()
