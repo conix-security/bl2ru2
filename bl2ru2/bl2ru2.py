@@ -17,9 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
-import re
 import os
-
+import re
 
 #####
 # To add a rule class while keeping the code clean:
@@ -35,6 +34,8 @@ DNS_BASERULE = 'alert udp $HOME_NET any -> any 53 (msg:"{} - {} - DNS request fo
 URL_BASERULE = 'alert http $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related URL ({})"; content:"{}"; http_uri;{} flow:to_server,established; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
 TLS_BASERULE = '#alert tls $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"{} - {} - Related TLS SNI ({})"; tls_sni; content:"{}";flow:to_server,established; classtype:trojan-activity; reference:url,{}; sid:{}; rev:1;)'
 MD5_BASERULE = 'alert tcp any [$HTTP_PORTS, 25] -> $HOME_NET any (msg:"{} - {} - MD5 hash found in blacklist {}"; classtype:trojan-activity; filestore; filemd5:{}; reference:url,{}; sid:{}; rev:1;)'
+
+
 class Bl2ru2:
     _sid_ = 0
     _org_ = ""
@@ -72,7 +73,6 @@ class Bl2ru2:
             return False
         return True
 
-
     def gen_dns_rule(self, name, domain, ref):
         '''
         Generate suricata rule for a domain
@@ -103,8 +103,6 @@ class Bl2ru2:
         rule = (URL_BASERULE.format(self._org_, name, uri, uri, rule_content, ref, self._sid_))
         self._sid_ += 1
         return rule, self._sid_ - 1
-
-
 
     def gen_ip_rule_udp(self, name, ip_addr, ref):
         '''
@@ -152,7 +150,6 @@ class Bl2ru2:
         return rule, self._sid_-1
 
 
-
 def __split_line__(line):
     '''
     Cut the line to extract the different fields
@@ -162,6 +159,7 @@ def __split_line__(line):
     ref_url = ref_url.strip()
     ioc = ioc.strip()
     return name, ioc, ref_url
+
 
 def __generate_rules__(gen, csv_file):
     '''
@@ -173,17 +171,17 @@ def __generate_rules__(gen, csv_file):
             for line in f_input:
                 line = line.strip()
                 (name, ioc, ref_url) = __split_line__(line)
-                if (ioc.startswith("/") or ioc.startswith("http")) and not os.path.isfile(ioc) :
+                if (ioc.startswith("/") or ioc.startswith("http")) and not os.path.isfile(ioc):
                     print("a")
                     # URI it is
                     (rule, sid) = gen.gen_uri_rule(name, ioc, ref_url)
                     rules.append(rule)
                 elif re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ioc):
                     # IP it is
-                    #(rule, sid) = gen.gen_ip_rule_udp(name, ioc, ref_url)
-                    #rules.append(rule)
-                    #(rule, sid) = gen.gen_ip_rule_tcp(name, ioc, ref_url)
-                    #rules.append(rule)
+                    # (rule, sid) = gen.gen_ip_rule_udp(name, ioc, ref_url)
+                    # rules.append(rule)
+                    # (rule, sid) = gen.gen_ip_rule_tcp(name, ioc, ref_url)
+                    # rules.append(rule)
                     (rule, sid) = gen.gen_ip_rule(name, ioc, ref_url)
                     rules.append(rule)
                 elif os.path.isfile(ioc):
@@ -202,6 +200,7 @@ def __generate_rules__(gen, csv_file):
         print("[+] Aborting!")
         quit(0)
     return rules
+
 
 def main(args):
     '''
@@ -231,15 +230,14 @@ def main(args):
             print("{}".format(rule))
 
 
-
 if __name__ == '__main__':
     __parser__ = argparse.ArgumentParser()
     __parser__.add_argument("file", help="Input file")
-    __parser__.add_argument("--output", "-o", \
-            help="Output file (default is stdout)")
-    __parser__.add_argument("--ssid", "-s", \
-            help="Starting sid of the generated rules", type=int)
-    __parser__.add_argument("--emitter", "-e", \
-            help="Emitter of the rules, default: bl2ru2", default="bl2ru2")
+    __parser__.add_argument("--output", "-o",
+                            help="Output file (default is stdout)")
+    __parser__.add_argument("--ssid", "-s",
+                            help="Starting sid of the generated rules", type=int)
+    __parser__.add_argument("--emitter", "-e",
+                            help="Emitter of the rules, default: bl2ru2", default="bl2ru2")
     __args__ = __parser__.parse_args()
     main(__args__)
